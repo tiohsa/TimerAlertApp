@@ -1,0 +1,36 @@
+﻿<Window x:Class="TimerAlertApp.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="アラートタイマー" Height="520" Width="500">
+    <Grid>
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+            <TextBlock Text="タイトルを入力してください:" Margin="5"/>
+            <TextBox x:Name="txtTitle" Width="250" HorizontalAlignment="Center" Margin="5" TextChanged="TxtTitle_TextChanged"/>
+
+            <TextBlock Text="分を入力してください:" Margin="5"/>
+            <TextBox x:Name="txtMinutes" Width="100" HorizontalAlignment="Center" Margin="5"/>
+
+            <TextBlock x:Name="lblStartTime" Text="スタート時間: --:--:--" Margin="5"/>
+            <TextBlock x:Name="lblNextAlert" Text="次のアラート時間: --:--:--" Margin="5"/>
+            <TextBlock x:Name="lblCountdown" Text="残り時間: --:--" FontSize="14" FontWeight="Bold" Margin="5"/>
+            <TextBlock x:Name="lblElapsedTime" Text="経過時間: --:--" Margin="5"/>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="10">
+                <Button x:Name="btnStart" Content="開始" Click="BtnStart_Click" Width="80" Margin="5"/>
+                <Button x:Name="btnStop" Content="停止" Click="BtnStop_Click" Width="80" Margin="5" IsEnabled="False"/>
+            </StackPanel>
+
+            <TextBlock Text="ログ履歴 (CSV保存)" FontWeight="Bold" Margin="5"/>
+            <ListView x:Name="logListView" Height="150" Width="450">
+                <ListView.View>
+                    <GridView>
+                        <GridViewColumn Header="タイトル" Width="200" DisplayMemberBinding="{Binding Title}" />
+                        <GridViewColumn Header="開始時間" Width="150" DisplayMemberBinding="{Binding StartTime}" />
+                        <GridViewColumn Header="経過時間" Width="100" DisplayMemberBinding="{Binding ElapsedTime}" />
+                    </GridView>
+                </ListView.View>
+            </ListView>
+            <Button x:Name="btnClearLog" Content="ログをクリア" Click="BtnClearLog_Click" Width="150" Margin="5"/>
+        </StackPanel>
+    </Grid>
+</Window>
