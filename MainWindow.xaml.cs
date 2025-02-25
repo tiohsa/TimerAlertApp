@@ -16,7 +16,15 @@ namespace TimerAlertApp
         private DateTime _nextAlertTime;
         private TimeSpan _remainingTime;
         private string _alertTitle;
-        private readonly string logFilePath = "log.csv"; // CSV保存ファイル
+        private string _selectedTag;
+        private readonly string logFilePath = "log.csv";             // CSV保存ファイル
+        private readonly string tagHistoryFilePath = "tagHistory.txt"; // タグ履歴の保存ファイル
+        private readonly string titleHistoryFilePath = "titleHistory.txt"; // タイトル履歴の保存ファイル
+
+        private HashSet<string> tagHistory = new HashSet<string>();    // タグ履歴
+        private HashSet<string> titleHistory = new HashSet<string>();  // タイトル履歴
+
+        public bool isPaused { get; private set; }
 
         public MainWindow()
         {
@@ -25,70 +33,110 @@ namespace TimerAlertApp
             _timer.Tick += Timer_Tick;
             _timer.Interval = TimeSpan.FromSeconds(1); // 1秒ごとに更新
 
-            LoadLog(); // 起動時にCSVからログを読み込む
+            LoadLog(); // CSVからログを読み込む
+
             btnStop.IsEnabled = false; // 初期状態で停止ボタンは無効
-            btnStart.IsEnabled = true; // 初期状態で開始ボタンも無効
-            txtTitle.IsEnabled = true;
+            btnStart.IsEnabled = false; // 初期状態で開始ボタンも無効
+            btnPause.IsEnabled = false;
+            cmbTitle.IsEnabled = true;
             cmbMinutes.IsEnabled = true;
+            cmbTags.IsEnabled = true;
 
             // **ComboBox の値を設定 (5分～60分)**
 #if DEBUG
             cmbMinutes.Items.Add(1);
 #endif
+            // コンボボックス（cmbMinutes）の選択肢を追加 (5分～60分, 5分刻み)
             for (int i = 5; i <= 60; i += 5)
             {
                 cmbMinutes.Items.Add(i);
             }
             cmbMinutes.SelectedIndex = -1; // 初期選択なし
-        }
 
-        private void TxtTitle_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            btnStart.IsEnabled = !string.IsNullOrWhiteSpace(txtTitle.Text);
-        }
+            // タグ履歴の読み込み
+            if (File.Exists(tagHistoryFilePath))
+            {
+                string[] savedTags = File.ReadAllLines(tagHistoryFilePath);
+                foreach (var tag in savedTags)
+                {
+                    if (!string.IsNullOrWhiteSpace(tag))
+                    {
+                        tagHistory.Add(tag);
+                        cmbTags.Items.Add(tag);
+                    }
+                }
+            }
 
+            // タイトル履歴の読み込み
+            if (File.Exists(titleHistoryFilePath))
+            {
+                string[] savedTitles = File.ReadAllLines(titleHistoryFilePath);
+                foreach (var title in savedTitles)
+                {
+                    if (!string.IsNullOrWhiteSpace(title))
+                    {
+                        titleHistory.Add(title);
+                        cmbTitle.Items.Add(title);
+                    }
+                }
+            }
+        }
+        // タイトル、時間、タグの入力チェック（TextChanged/SelectionChanged共通イベントハンドラー）
         private void TxtInputChanged(object sender, EventArgs e)
         {
-            // **タイトルと時間の入力チェック**
-            bool isTitleValid = !string.IsNullOrWhiteSpace(txtTitle.Text);
+            bool isTitleValid = !string.IsNullOrWhiteSpace(cmbTitle.Text);
             bool isMinutesValid = cmbMinutes.SelectedItem != null;
+            // タグは任意入力なのでチェック対象外
 
-            // 両方の入力がある場合のみ `開始` ボタンを有効化
             btnStart.IsEnabled = isTitleValid && isMinutesValid;
         }
 
         private void BtnStart_Click(object sender, RoutedEventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(txtTitle.Text))
+            if (cmbMinutes.SelectedItem == null)
             {
-                ShowAlert("タイトルを入力してください。", "エラー", isError: true);
+                ShowAlert("時間を選択してください。", "エラー", isError: true);
                 return;
             }
-            if (int.TryParse(cmbMinutes.Text, out _intervalMinutes) && _intervalMinutes > 0)
+
+            _intervalMinutes = (int)cmbMinutes.SelectedItem;
+            _startTime = DateTime.Now;
+            _nextAlertTime = _startTime.AddMinutes(_intervalMinutes);
+            _remainingTime = TimeSpan.FromMinutes(_intervalMinutes);
+            _alertTitle = cmbTitle.Text;      // タイトル取得
+            _selectedTag = cmbTags.Text;      // タグ取得
+
+            // タイトル履歴にない場合、保存＆ComboBoxへ追加
+            if (!string.IsNullOrWhiteSpace(_alertTitle) && !titleHistory.Contains(_alertTitle))
             {
-                _startTime = DateTime.Now;
-                _nextAlertTime = _startTime.AddMinutes(_intervalMinutes);
-                _remainingTime = TimeSpan.FromMinutes(_intervalMinutes);
-                _alertTitle = txtTitle.Text; // タイトル取得
-
-                lblStartTime.Text = $"スタート時間: {_startTime:HH:mm:ss}";
-                lblNextAlert.Text = $"次のアラート時間: {_nextAlertTime:HH:mm:ss}";
-                lblCountdown.Text = $"残り時間: {_remainingTime:mm\\:ss}";
-
-                _timer.Start();
-
-                // **ボタンの制御**
-                btnStart.IsEnabled = false;  // 開始ボタンを無効化
-                btnStop.IsEnabled = true;    // 停止ボタンを有効化
-                txtTitle.IsEnabled = false;
-                cmbMinutes.IsEnabled = false;
-
-                //ShowAlert($"アラートを {_intervalMinutes} 分ごとに設定しました。\nタイトル: {_alertTitle}", "開始");
+                titleHistory.Add(_alertTitle);
+                cmbTitle.Items.Add(_alertTitle);
+                File.AppendAllText(titleHistoryFilePath, _alertTitle + Environment.NewLine);
             }
-            else
+
+            // タグ履歴にない場合、保存＆ComboBoxへ追加
+            if (!string.IsNullOrWhiteSpace(_selectedTag) && !tagHistory.Contains(_selectedTag))
             {
-                ShowAlert("正しい時間（分）を入力してください。", "エラー", isError: true);
+                tagHistory.Add(_selectedTag);
+                cmbTags.Items.Add(_selectedTag);
+                File.AppendAllText(tagHistoryFilePath, _selectedTag + Environment.NewLine);
             }
+
+            lblStartTime.Text = $"スタート時間: {_startTime:HH:mm:ss}";
+            lblNextAlert.Text = $"次のアラート時間: {_nextAlertTime:HH:mm:ss}";
+            lblCountdown.Text = $"残り時間: {_remainingTime:mm\\:ss}";
+
+            _timer.Start();
+
+            // 入力とボタンの制御
+            btnStart.IsEnabled = false;
+            btnStop.IsEnabled = true;
+            btnPause.IsEnabled = true;
+            cmbTitle.IsEnabled = false;
+            cmbMinutes.IsEnabled = false;
+            cmbTags.IsEnabled = false;
+
+            //ShowAlert($"アラートを {_intervalMinutes} 分ごとに設定しました。\nタイトル: {_alertTitle}\nタグ: {_selectedTag}", "開始");
         }
 
         private void BtnStop_Click(object sender, RoutedEventArgs e)
@@ -99,71 +147,120 @@ namespace TimerAlertApp
             lblCountdown.Text = "カウントダウン: --:--";
             lblElapsedTime.Text = $"経過時間: {elapsedTime:mm\\:ss}";
 
-            // **CSVにログを保存**
-            LogEntry newLog = SaveLog(_alertTitle, _startTime, elapsedTime);
+            // CSVにログを保存
+            LogEntry newLog = SaveLog(_alertTitle, _startTime, elapsedTime, _selectedTag);
 
-            // **UIのリストに追加**
+            // UIのListViewに追加
             logListView.Items.Insert(0, newLog);
 
-            // **ボタンの制御**
-            btnStart.IsEnabled = true;   // 開始ボタンを有効化
-            btnStop.IsEnabled = false;   // 停止ボタンを無効化
-            txtTitle.IsEnabled = true;
+            // 入力とボタンの制御
+            btnStart.IsEnabled = true;
+            btnStop.IsEnabled = false;
+            btnPause.IsEnabled = false;
+            cmbTitle.IsEnabled = true;
             cmbMinutes.IsEnabled = true;
+            cmbTags.IsEnabled = true;
 
-            //ShowAlert($"アラートを停止しました。\nタイトル: {_alertTitle}\n経過時間: {elapsedTime:mm\\:ss}", "停止");
+            //ShowAlert($"アラートを停止しました。\nタイトル: {_alertTitle}\nタグ: {_selectedTag}\n経過時間: {elapsedTime:mm\\:ss}", "停止");
         }
 
         private void Timer_Tick(object sender, EventArgs e)
         {
+            if (isPaused) return;
+
             _remainingTime = _nextAlertTime - DateTime.Now;
 
             if (_remainingTime.TotalSeconds <= 0)
             {
-                ShowAlert($"【{_alertTitle}】\n指定時間 {_intervalMinutes} 分が経過しました！", "アラート", isWarning: true);
-                _nextAlertTime = DateTime.Now.AddMinutes(_intervalMinutes);
+                // 指定時間経過時、カスタムダイアログを表示
+                _timer.Stop();
+                AlertDialog dialog = new AlertDialog($"【{_alertTitle}】\nタグ: {_selectedTag}\n指定時間 {_intervalMinutes} 分が経過しました！");
+                dialog.Owner = this;
+                bool? result = dialog.ShowDialog();
+                if (result == true)
+                {
+                    if (dialog.Result == AlertDialogResult.Pause)
+                    {
+                        isPaused = true;
+                        btnPause.Content = "再開";
+                        //ShowAlert("タイマーを一時停止しました。", "一時停止");
+                        return; // 一時停止状態
+                    }
+                    else if (dialog.Result == AlertDialogResult.Stop)
+                    {
+                        BtnStop_Click(null, null);
+                        return;
+                    }
+                    else if (dialog.Result == AlertDialogResult.Continue)
+                    {
+                        // 継続が選択された場合、次のアラート時刻をリセットして再開
+                        _nextAlertTime = DateTime.Now.AddMinutes(_intervalMinutes);
+                        _timer.Start();
+                    }
+                }
+                else
+                {
+                    // ダイアログでキャンセルされた場合も、次のインターバルで再開
+                    _nextAlertTime = DateTime.Now.AddMinutes(_intervalMinutes);
+                    _timer.Start();
+                }
             }
-
             lblCountdown.Text = $"残り時間: {_remainingTime:mm\\:ss}";
             lblNextAlert.Text = $"次のアラート時間: {_nextAlertTime:HH:mm:ss}";
         }
-
+        private void BtnPause_Click(object sender, RoutedEventArgs e)
+        {
+            if (!isPaused)
+            {
+                _timer.Stop();
+                isPaused = true;
+                btnPause.Content = "再開"; // 一時停止状態
+                //ShowAlert("タイマーを一時停止しました。", "一時停止");
+            }
+            else
+            {
+                // **一時停止解除（再開）**
+                _nextAlertTime = DateTime.Now.Add(_remainingTime); // 残り時間を適用
+                _timer.Start();
+                isPaused = false;
+                btnPause.Content = "一時停止"; // 再開時
+                //ShowAlert("タイマーを再開しました。", "再開");
+            }
+        }
         private void ShowAlert(string message, string title, bool isWarning = false, bool isError = false)
         {
             MessageBoxImage icon = isWarning ? MessageBoxImage.Warning :
-                                 isError ? MessageBoxImage.Error :
-                                 MessageBoxImage.Information;
-
+                                     isError ? MessageBoxImage.Error :
+                                     MessageBoxImage.Information;
             MessageBox.Show(message, title, MessageBoxButton.OK, icon, MessageBoxResult.OK, MessageBoxOptions.DefaultDesktopOnly);
         }
 
-        private LogEntry SaveLog(string title, DateTime startTime, TimeSpan elapsedTime)
+        private LogEntry SaveLog(string title, DateTime startTime, TimeSpan elapsedTime, string tag)
         {
             LogEntry logEntry = new LogEntry
             {
                 Title = title,
                 StartTime = startTime.ToString("yyyy/MM/dd HH:mm:ss"),
-                ElapsedTime = elapsedTime.ToString(@"mm\:ss")
+                ElapsedTime = elapsedTime.ToString(@"mm\:ss"),
+                Tag = tag
             };
 
             try
             {
                 bool fileExists = File.Exists(logFilePath);
-
                 using (StreamWriter sw = new StreamWriter(logFilePath, true))
                 {
                     if (!fileExists)
                     {
-                        sw.WriteLine("タイトル,開始時間,経過時間"); // CSVのヘッダー行
+                        sw.WriteLine("タイトル,開始時間,経過時間,タグ");
                     }
-                    sw.WriteLine($"{logEntry.Title},{logEntry.StartTime},{logEntry.ElapsedTime}");
+                    sw.WriteLine($"{logEntry.Title},{logEntry.StartTime},{logEntry.ElapsedTime},{logEntry.Tag}");
                 }
             }
             catch (Exception ex)
             {
                 ShowAlert($"CSVログの保存に失敗しました。\n{ex.Message}", "エラー", isError: true);
             }
-
             return logEntry;
         }
 
@@ -175,19 +272,19 @@ namespace TimerAlertApp
                 foreach (string entry in logEntries)
                 {
                     string[] columns = entry.Split(',');
-                    if (columns.Length == 3)
+                    if (columns.Length == 4)
                     {
                         logListView.Items.Insert(0, new LogEntry
                         {
                             Title = columns[0],
                             StartTime = columns[1],
-                            ElapsedTime = columns[2]
+                            ElapsedTime = columns[2],
+                            Tag = columns[3]
                         });
                     }
                 }
             }
         }
-
         private void BtnClearLog_Click(object sender, RoutedEventArgs e)
         {
             logListView.Items.Clear();
@@ -207,5 +304,6 @@ namespace TimerAlertApp
         public string Title { get; set; }
         public string StartTime { get; set; }
         public string ElapsedTime { get; set; }
+        public string Tag { get; set; }
     }
 }
