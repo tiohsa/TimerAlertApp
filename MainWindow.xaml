@@ -8,7 +8,7 @@
             <TextBox x:Name="txtTitle" Width="250" HorizontalAlignment="Center" Margin="5" TextChanged="TxtTitle_TextChanged"/>
 
             <TextBlock Text="分を入力してください:" Margin="5"/>
-            <TextBox x:Name="txtMinutes" Width="100" HorizontalAlignment="Center" Margin="5"/>
+            <ComboBox x:Name="cmbMinutes" Width="100" HorizontalAlignment="Center" Margin="5" SelectionChanged="TxtInputChanged"/>
 
             <TextBlock x:Name="lblStartTime" Text="スタート時間: --:--:--" Margin="5"/>
             <TextBlock x:Name="lblNextAlert" Text="次のアラート時間: --:--:--" Margin="5"/>

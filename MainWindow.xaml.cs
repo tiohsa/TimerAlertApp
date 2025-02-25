@@ -29,12 +29,32 @@ namespace TimerAlertApp
             btnStop.IsEnabled = false; // 初期状態で停止ボタンは無効
             btnStart.IsEnabled = true; // 初期状態で開始ボタンも無効
             txtTitle.IsEnabled = true;
-            txtMinutes.IsEnabled = true;
+            cmbMinutes.IsEnabled = true;
+
+            // **ComboBox の値を設定 (5分～60分)**
+#if DEBUG
+            cmbMinutes.Items.Add(1);
+#endif
+            for (int i = 5; i <= 60; i += 5)
+            {
+                cmbMinutes.Items.Add(i);
+            }
+            cmbMinutes.SelectedIndex = -1; // 初期選択なし
         }
 
         private void TxtTitle_TextChanged(object sender, TextChangedEventArgs e)
         {
             btnStart.IsEnabled = !string.IsNullOrWhiteSpace(txtTitle.Text);
+        }
+
+        private void TxtInputChanged(object sender, EventArgs e)
+        {
+            // **タイトルと時間の入力チェック**
+            bool isTitleValid = !string.IsNullOrWhiteSpace(txtTitle.Text);
+            bool isMinutesValid = cmbMinutes.SelectedItem != null;
+
+            // 両方の入力がある場合のみ `開始` ボタンを有効化
+            btnStart.IsEnabled = isTitleValid && isMinutesValid;
         }
 
         private void BtnStart_Click(object sender, RoutedEventArgs e)
@@ -44,7 +64,7 @@ namespace TimerAlertApp
                 ShowAlert("タイトルを入力してください。", "エラー", isError: true);
                 return;
             }
-            if (int.TryParse(txtMinutes.Text, out _intervalMinutes) && _intervalMinutes > 0)
+            if (int.TryParse(cmbMinutes.Text, out _intervalMinutes) && _intervalMinutes > 0)
             {
                 _startTime = DateTime.Now;
                 _nextAlertTime = _startTime.AddMinutes(_intervalMinutes);
@@ -61,9 +81,9 @@ namespace TimerAlertApp
                 btnStart.IsEnabled = false;  // 開始ボタンを無効化
                 btnStop.IsEnabled = true;    // 停止ボタンを有効化
                 txtTitle.IsEnabled = false;
-                txtMinutes.IsEnabled = false;
+                cmbMinutes.IsEnabled = false;
 
-                ShowAlert($"アラートを {_intervalMinutes} 分ごとに設定しました。\nタイトル: {_alertTitle}", "開始");
+                //ShowAlert($"アラートを {_intervalMinutes} 分ごとに設定しました。\nタイトル: {_alertTitle}", "開始");
             }
             else
             {
@@ -89,9 +109,9 @@ namespace TimerAlertApp
             btnStart.IsEnabled = true;   // 開始ボタンを有効化
             btnStop.IsEnabled = false;   // 停止ボタンを無効化
             txtTitle.IsEnabled = true;
-            txtMinutes.IsEnabled = true;
+            cmbMinutes.IsEnabled = true;
 
-            ShowAlert($"アラートを停止しました。\nタイトル: {_alertTitle}\n経過時間: {elapsedTime:mm\\:ss}", "停止");
+            //ShowAlert($"アラートを停止しました。\nタイトル: {_alertTitle}\n経過時間: {elapsedTime:mm\\:ss}", "停止");
         }
 
         private void Timer_Tick(object sender, EventArgs e)
