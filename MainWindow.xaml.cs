@@ -307,6 +307,22 @@ namespace TimerAlertApp
                 cmbTags.Text = selectedLog.Tag;
             }
         }
+        private void BtnAnalyze_Click(object sender, RoutedEventArgs e)
+        {
+            // ログデータを収集
+            List<LogEntry> logEntries = logListView.Items.Cast<LogEntry>().ToList();
+
+            if (logEntries.Count == 0)
+            {
+                ShowAlert("ログデータがありません。", "分析エラー", isError: true);
+                return;
+            }
+
+            // 分析ダイアログを開く
+            AnalysisDialog analysisDialog = new AnalysisDialog(logEntries);
+            analysisDialog.Owner = this;
+            analysisDialog.ShowDialog();
+        }
     }
 
     public class LogEntry
