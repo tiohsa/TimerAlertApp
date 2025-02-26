@@ -30,7 +30,7 @@
             <TextBlock x:Name="lblElapsedTime" Text="経過時間: --:--" Margin="5"/>
 
             <TextBlock Text="ログ履歴 (CSV保存)" FontWeight="Bold" Margin="5"/>
-            <ListView x:Name="logListView" Height="150" Width="500">
+            <ListView x:Name="logListView" Height="150" Width="500" MouseDoubleClick="logListView_MouseDoubleClick">
                 <ListView.View>
                     <GridView>
                         <GridViewColumn Header="タグ" Width="100" DisplayMemberBinding="{Binding Tag}" />

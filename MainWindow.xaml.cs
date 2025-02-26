@@ -297,6 +297,16 @@ namespace TimerAlertApp
                 ShowAlert($"CSVログのクリアに失敗しました。\n{ex.Message}", "エラー", isError: true);
             }
         }
+
+        private void logListView_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (logListView.SelectedItem is LogEntry selectedLog)
+            {
+                // **タイトルとタグをメインウィンドウの入力欄に反映**
+                cmbTitle.Text = selectedLog.Title;
+                cmbTags.Text = selectedLog.Tag;
+            }
+        }
     }
 
     public class LogEntry
