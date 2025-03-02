@@ -25,6 +25,7 @@ namespace TimerAlertApp
         private HashSet<string> titleHistory = new HashSet<string>();  // タイトル履歴
 
         public bool isPaused { get; private set; }
+        private DispatcherTimer _inactivityTimer; //追加：非アクティブタイマー
 
         public MainWindow()
         {
@@ -32,6 +33,12 @@ namespace TimerAlertApp
             _timer = new DispatcherTimer();
             _timer.Tick += Timer_Tick;
             _timer.Interval = TimeSpan.FromSeconds(1); // 1秒ごとに更新
+
+            //追加：非アクティブタイマーの初期化
+            _inactivityTimer = new DispatcherTimer();
+            _inactivityTimer.Tick += InactivityTimer_Tick;
+            _inactivityTimer.Interval = TimeSpan.FromMinutes(5); // 5分ごとにチェック
+            _inactivityTimer.Start(); // 非アクティブタイマーをスタート
 
             LoadLog(); // CSVからログを読み込む
 
@@ -51,7 +58,7 @@ namespace TimerAlertApp
             {
                 cmbMinutes.Items.Add(i);
             }
-            cmbMinutes.SelectedIndex = -1; // 初期選択なし
+            cmbMinutes.SelectedIndex = 0; // 初期選択なし
 
             // タグ履歴の読み込み
             if (File.Exists(tagHistoryFilePath))
@@ -79,6 +86,15 @@ namespace TimerAlertApp
                         cmbTitle.Items.Add(title);
                     }
                 }
+            }
+        }
+        //追加：非アクティブタイマーの処理
+        private void InactivityTimer_Tick(object sender, EventArgs e)
+        {
+            // タイマーが起動していない場合のみ、メッセージを表示
+            if (!_timer.IsEnabled)
+            {
+                ShowAlert("タイマーが起動していません", "Infomation", isWarning: true);
             }
         }
         // タイトル、時間、タグの入力チェック（TextChanged/SelectionChanged共通イベントハンドラー）
@@ -126,6 +142,8 @@ namespace TimerAlertApp
             lblNextAlert.Text = $"次のアラート時間: {_nextAlertTime:HH:mm:ss}";
             lblCountdown.Text = $"残り時間: {_remainingTime:mm\\:ss}";
 
+
+
             _timer.Start();
 
             // 入力とボタンの制御
@@ -135,7 +153,6 @@ namespace TimerAlertApp
             cmbTitle.IsEnabled = false;
             cmbMinutes.IsEnabled = false;
             cmbTags.IsEnabled = false;
-
             //ShowAlert($"アラートを {_intervalMinutes} 分ごとに設定しました。\nタイトル: {_alertTitle}\nタグ: {_selectedTag}", "開始");
         }
 
@@ -161,7 +178,7 @@ namespace TimerAlertApp
             cmbMinutes.IsEnabled = true;
             cmbTags.IsEnabled = true;
 
-            //ShowAlert($"アラートを停止しました。\nタイトル: {_alertTitle}\nタグ: {_selectedTag}\n経過時間: {elapsedTime:mm\\:ss}", "停止");
+            //ShowAlert($"アラートを停止しました。\nタイトル: {_alertTitle}\nタグ: {_selectedTag}\n経過時間: {elapsedTime:mm\:ss}", "停止");
         }
 
         private void Timer_Tick(object sender, EventArgs e)
@@ -205,7 +222,15 @@ namespace TimerAlertApp
                     _timer.Start();
                 }
             }
-            lblCountdown.Text = $"残り時間: {_remainingTime:mm\\:ss}";
+            if (_remainingTime.TotalSeconds < 0)
+            {
+                lblCountdown.Text = "残り時間: 00:00";
+            }
+            else
+            {
+                lblCountdown.Text = $"残り時間: {_remainingTime:mm\\:ss}";
+            }
+
             lblNextAlert.Text = $"次のアラート時間: {_nextAlertTime:HH:mm:ss}";
         }
         private void BtnPause_Click(object sender, RoutedEventArgs e)

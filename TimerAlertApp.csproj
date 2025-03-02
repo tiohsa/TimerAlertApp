@@ -6,7 +6,12 @@
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<UseWPF>true</UseWPF>
+		<ApplicationIcon>clock.ico</ApplicationIcon>
 	</PropertyGroup>
+
+	<ItemGroup>
+	  <Content Include="clock.ico" />
+	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="OxyPlot.Core" Version="2.2.0" />
